@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-gray-200 flex flex-col min-h-screen">
+    <!-- Header -->
+    <div class="bg-green-600 text-white p-4 text-center font-bold text-xl">
+        Chat App
+    </div>
+
+    <!-- Message Area -->
+    <div id="messageArea" class="flex flex-col flex-grow p-4 space-y-3 overflow-auto">
+        <!-- Messages will be dynamically inserted here -->
+    </div>
+
+    <!-- Input Area -->
+    <form id="form" class="flex items-center bg-gray-800 p-3 sticky bottom-0">
+        <input id="myname" type="text" placeholder="Your Name" class="hidden">
+        <input id="message" type="text" placeholder="Type a message" 
+            class="flex-grow bg-gray-700 text-gray-200 rounded-full px-4 py-2 border border-gray-600 focus:outline-none">
+        <button class="ml-3 bg-green-600 hover:bg-green-700 text-white rounded-full px-4 py-2">
+            Send
+        </button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const form = document.getElementById('form');
+        const messageInput = document.getElementById('message');
+        const messageArea = document.getElementById('messageArea');
+        let myname = prompt("Enter your name:") || "Anonymous";
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            if (messageInput.value.trim()) {
+                const message = messageInput.value.trim();
+
+                // Emit the message
+                socket.emit('send message', { username: myname, chat: message });
+
+                // Add the user's own message to the right (only locally)
+                appendMessage(myname, message, true);
+
+                // Clear the input field
+                messageInput.value = '';
+            }
+        });
+
+        socket.on('send message', (data) => {
+            // Avoid appending your own messages received via the socket
+            if (data.username !== myname) {
+                appendMessage(data.username, data.chat, false);
+            }
+        });
+
+        function appendMessage(username, chat, isOwnMessage) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = `flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`;
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `
+                max-w-xs px-4 py-2 rounded-lg shadow-lg 
+                ${isOwnMessage ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-200'}
+            `;
+
+            const messageSender = document.createElement('p');
+            messageSender.className = 'text-xs text-gray-400';
+            messageSender.textContent = isOwnMessage ? 'You' : username;
+
+            const messageText = document.createElement('p');
+            messageText.className = 'mt-1';
+            messageText.textContent = chat;
+
+            messageBubble.appendChild(messageSender);
+            messageBubble.appendChild(messageText);
+            messageWrapper.appendChild(messageBubble);
+            messageArea.appendChild(messageWrapper);
+
+            // Scroll to the bottom
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+    </script>
+</body>
+
+</html>
